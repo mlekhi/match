@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ForceGraph3D } from 'react-force-graph';
+import * as THREE from 'three'; // Import THREE.js for 3D geometry
 import './App.css';
 import guestData from './data.json'; // Import the JSON data
 
@@ -8,6 +9,7 @@ const MatchGraph = () => {
   const [filteredData, setFilteredData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState(null); // State for clicked person
+  const [error, setError] = useState(''); // State for error message
 
   // Helper function to calculate matching score between two people
   const calculateMatchingScore = (person1, person2) => {
@@ -60,11 +62,21 @@ const MatchGraph = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
+    setError(''); // Clear any previous errors
+
+    // Check if the entered name exists in guestData
+    const userExists = guestData.some(person => person.name.toLowerCase() === name.toLowerCase());
+
+    if (!userExists) {
+      // If the name is not found in guestData, show an error message
+      setError('Name not found in the guest list. Please use the exact name you registered under.');
+      setLoading(false);
+      return;
+    }
 
     // Filter the approved people and generate the graph data
     const graphData = filterApprovedPeople(name);
     setFilteredData(graphData);
-
     setLoading(false);
   };
 
@@ -82,6 +94,7 @@ const MatchGraph = () => {
     <div className="app-container">
       {!filteredData ? (
         <form onSubmit={handleSubmit} className="login-form">
+          <img src="logo.png" style={{ width: '150px', height: 'auto' }} alt="Logo" />
           <h2>Find Your Matches</h2>
           <input
             type="text"
@@ -94,6 +107,7 @@ const MatchGraph = () => {
           <button type="submit" className="submit-btn">
             {loading ? 'Loading...' : 'Find Matches'}
           </button>
+          {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
         </form>
       ) : (
         <div className="graph-container">
@@ -106,14 +120,14 @@ const MatchGraph = () => {
             linkDirectionalParticleSpeed={(d) => d.value * 0.001}
             onNodeClick={handleNodeClick} // Add click handler
             nodeThreeObject={(node) => {
-              const sprite = new window.THREE.Sprite(
-                new window.THREE.SpriteMaterial({ color: node.color })
-              );
-              sprite.scale.set(12, 12, 1);
-              return sprite;
+              // Create a sphere geometry for each node (to make them circular)
+              const sphereGeometry = new THREE.SphereGeometry(8, 16, 16); // Radius 8, smoothness 16x16
+              const material = new THREE.MeshBasicMaterial({ color: node.color || '#1e3c66' });
+              const sphere = new THREE.Mesh(sphereGeometry, material);
+              return sphere;
             }}
-            width={800}
-            height={600}
+            width={window.innerWidth} // Full width of the window
+            height={window.innerHeight - 100} // Full height minus the header
           />
 
           {/* Popup for person details */}
