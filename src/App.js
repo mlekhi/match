@@ -9,26 +9,28 @@ const MatchGraph = () => {
   const [filteredData, setFilteredData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState(null); // State for clicked person
+  const [highScoreMatches, setHighScoreMatches] = useState([]); // For people with score > 70
   const [error, setError] = useState(''); // State for error message
 
   // Helper function to determine color based on matching score
   const getNodeColor = (score) => {
-    if (score == 100) return '#ffffff'; // Green for high scores
-    if (score >= 90) return '#a8c4e0'; // Green for high scores
-    if (score >= 80) return '#b0d5f5'; // Green for high scores
-    if (score >= 70) return '#658db5'; // Green for high scores
-    if (score >= 60) return '#51769c'; // Green for high scores
-    if (score >= 50) return '#375b80'; // Green for high scores
-    if (score >= 40) return '#234566'; // Green for high scores
-    if (score >= 30) return '#15324d'; // Yellow for medium scores
-    return '#071929'; // Red for low scores
+    if (score === 100) return '#ffffff'; // Highest score
+    if (score >= 90) return '#a8c4e0';
+    if (score >= 80) return '#b0d5f5';
+    if (score >= 70) return '#658db5';
+    if (score >= 60) return '#51769c';
+    if (score >= 50) return '#375b80';
+    if (score >= 40) return '#234566';
+    if (score >= 30) return '#15324d';
+    return '#071929'; // Lowest score
   };
 
-  // Filter data based on approval status and prepare the graph structure
-  const filterApprovedPeople = (name) => {
-    const approvedPeople = guestData.filter(person => person.approval_status === 'approved');
+  // Prepare the graph structure for all people (no filter)
+  const preparePeopleData = (inputName) => {
+    const normalizedInputName = inputName.toLowerCase(); // Normalize the input name to lowercase
 
-    const user = approvedPeople.find(person => person.name === name);
+    // Find the user by comparing names in lowercase
+    const user = guestData.find(person => person.name.toLowerCase() === normalizedInputName);
 
     if (!user) {
       setError('Name not found in the guest list. Please use the exact name you registered under.');
@@ -36,21 +38,28 @@ const MatchGraph = () => {
     }
 
     // Generate graph structure: nodes and links with dynamic matching score from `matching_scores`
-    const nodes = approvedPeople.map(person => ({
+    const nodes = guestData.map(person => ({
       id: person.name,
       name: person.name,
-      group: person.name === name ? 1 : 2, // Group 1 is the user, 2 is everyone else
+      group: person.name === user.name ? 1 : 2, // Group 1 is the user, 2 is everyone else
       description: person.description,
       matchingScore: user.matching_scores[person.name] || 0,
       color: getNodeColor(user.matching_scores[person.name] || 0), // Set color based on score
     }));
 
     const links = [];
-    approvedPeople.forEach(person => {
-      if (person.name !== name) {
+    const highScoreMatchesList = [];
+
+    guestData.forEach(person => {
+      if (person.name !== user.name) {
         const score = user.matching_scores[person.name] || 0;
+
+        if (score >= 70) {
+          highScoreMatchesList.push(person); // Ensure we're pushing the correct person object
+        }
+
         links.push({
-          source: name,
+          source: user.name,
           target: person.name,
           value: score, // Matching score between the user and this person
           distance: 500 - (score * 10), // Drastically adjust distance, higher score = shorter distance
@@ -58,25 +67,35 @@ const MatchGraph = () => {
       }
     });
 
+    setHighScoreMatches(highScoreMatchesList); // Set the high score matches for rendering chips
     return { nodes, links };
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(''); // Clear any previous errors
+    setError('');
 
-    // Filter the approved people and generate the graph data
-    const graphData = filterApprovedPeople(name);
+    // Prepare the graph data for all people and generate the graph data
+    const graphData = preparePeopleData(name);
     if (graphData) {
       setFilteredData(graphData);
     }
     setLoading(false);
   };
 
-  // Handle node click
+  // Handle node click (and chip click)
   const handleNodeClick = (node) => {
     setSelectedPerson(node); // Set the clicked person to show their info
+  };
+
+  // Handle chip click
+  const handleChipClick = (person) => {
+    setSelectedPerson({
+      name: person.name,
+      description: person.description,
+      matchingScore: person.matchingScore,
+    }); // Set the selected person from the chip
   };
 
   // Close popup
@@ -106,6 +125,17 @@ const MatchGraph = () => {
       ) : (
         <div className="graph-container">
           <h3 style={{ color: 'white' }}>Your Top Matches</h3>
+          <div className="chips-container">
+            {highScoreMatches.map((person, index) => (
+              <span
+                key={index}
+                className="chip"
+                onClick={() => handleChipClick(person)} // Open corresponding person popup on click
+              >
+                {person.name} {/* Correctly access the person.name */}
+              </span>
+            ))}
+          </div>
           <ForceGraph3D
             graphData={filteredData}
             nodeAutoColorBy="group"
@@ -131,7 +161,6 @@ const MatchGraph = () => {
               <button className="close-btn" onClick={handleClosePopup}>x</button>
               <h2>{selectedPerson.name}</h2>
               <p>{selectedPerson.description ? selectedPerson.description : 'No description available'}</p>
-              {/* You can extend this section to show more details */}
             </div>
           )}
         </div>
