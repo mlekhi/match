@@ -11,47 +11,49 @@ const MatchGraph = () => {
   const [selectedPerson, setSelectedPerson] = useState(null); // State for clicked person
   const [error, setError] = useState(''); // State for error message
 
-  // Helper function to calculate matching score between two people
-  const calculateMatchingScore = (person1, person2) => {
-    const commonInterests = person1.common_interests?.filter(interest =>
-      person2.common_interests?.includes(interest)
-    ) || [];
-    const commonDiscussionTopics = person1.discussion_topics?.filter(topic =>
-      person2.discussion_topics?.includes(topic)
-    ) || [];
-
-    // Calculate score based on the number of shared interests and discussion topics
-    const interestScore = commonInterests.length * 10; // Each common interest gives 10 points
-    const discussionScore = commonDiscussionTopics.length * 5; // Each common discussion topic gives 5 points
-    return interestScore + discussionScore;
+  // Helper function to determine color based on matching score
+  const getNodeColor = (score) => {
+    if (score == 100) return '#ffffff'; // Green for high scores
+    if (score >= 90) return '#a8c4e0'; // Green for high scores
+    if (score >= 80) return '#b0d5f5'; // Green for high scores
+    if (score >= 70) return '#658db5'; // Green for high scores
+    if (score >= 60) return '#51769c'; // Green for high scores
+    if (score >= 50) return '#375b80'; // Green for high scores
+    if (score >= 40) return '#234566'; // Green for high scores
+    if (score >= 30) return '#15324d'; // Yellow for medium scores
+    return '#071929'; // Red for low scores
   };
 
-  // Filter data based on approval status and calculate matching scores
+  // Filter data based on approval status and prepare the graph structure
   const filterApprovedPeople = (name) => {
     const approvedPeople = guestData.filter(person => person.approval_status === 'approved');
 
-    const user = { id: name, name: name, group: 1, description: 'You', common_interests: [], discussion_topics: [] };
+    const user = approvedPeople.find(person => person.name === name);
 
-    // Generate graph structure: nodes and links with dynamic matching score
-    const nodes = [user];
+    if (!user) {
+      setError('Name not found in the guest list. Please use the exact name you registered under.');
+      return null;
+    }
+
+    // Generate graph structure: nodes and links with dynamic matching score from `matching_scores`
+    const nodes = approvedPeople.map(person => ({
+      id: person.name,
+      name: person.name,
+      group: person.name === name ? 1 : 2, // Group 1 is the user, 2 is everyone else
+      description: person.description,
+      matchingScore: user.matching_scores[person.name] || 0,
+      color: getNodeColor(user.matching_scores[person.name] || 0), // Set color based on score
+    }));
+
     const links = [];
-
     approvedPeople.forEach(person => {
       if (person.name !== name) {
-        const matchingScore = calculateMatchingScore(user, person);
-
-        nodes.push({
-          id: person.name,
-          name: person.name,
-          group: 2,
-          description: person.description,
-          matchingScore
-        });
-
+        const score = user.matching_scores[person.name] || 0;
         links.push({
-          source: user.name,
+          source: name,
           target: person.name,
-          value: matchingScore // Use matching score for link strength
+          value: score, // Matching score between the user and this person
+          distance: 500 - (score * 10), // Drastically adjust distance, higher score = shorter distance
         });
       }
     });
@@ -64,19 +66,11 @@ const MatchGraph = () => {
     setLoading(true);
     setError(''); // Clear any previous errors
 
-    // Check if the entered name exists in guestData
-    const userExists = guestData.some(person => person.name.toLowerCase() === name.toLowerCase());
-
-    if (!userExists) {
-      // If the name is not found in guestData, show an error message
-      setError('Name not found in the guest list. Please use the exact name you registered under.');
-      setLoading(false);
-      return;
-    }
-
     // Filter the approved people and generate the graph data
     const graphData = filterApprovedPeople(name);
-    setFilteredData(graphData);
+    if (graphData) {
+      setFilteredData(graphData);
+    }
     setLoading(false);
   };
 
@@ -115,9 +109,10 @@ const MatchGraph = () => {
           <ForceGraph3D
             graphData={filteredData}
             nodeAutoColorBy="group"
-            nodeLabel={(node) => `${node.name}: Matching Score ${node.matchingScore}`}
+            nodeLabel={(node) => `${node.name}: ${node.description}`}
             linkDirectionalParticles={4}
             linkDirectionalParticleSpeed={(d) => d.value * 0.001}
+            linkDistance={(link) => link.distance} // Use calculated distance
             onNodeClick={handleNodeClick} // Add click handler
             nodeThreeObject={(node) => {
               // Create a sphere geometry for each node (to make them circular)
@@ -133,12 +128,10 @@ const MatchGraph = () => {
           {/* Popup for person details */}
           {selectedPerson && (
             <div className="person-popup">
-              <button className="close-btn" onClick={handleClosePopup}>X</button>
+              <button className="close-btn" onClick={handleClosePopup}>x</button>
               <h2>{selectedPerson.name}</h2>
               <p>{selectedPerson.description ? selectedPerson.description : 'No description available'}</p>
-              <p><strong>Matching Score:</strong> {selectedPerson.matchingScore}</p>
-              <p><strong>Common Interests:</strong> {selectedPerson.common_interests?.join(', ') || 'No common interests'}</p>
-              <p><strong>Discussion Topics:</strong> {selectedPerson.discussion_topics?.join(', ') || 'No discussion topics'}</p>
+              {/* You can extend this section to show more details */}
             </div>
           )}
         </div>
