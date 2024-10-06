@@ -13,12 +13,12 @@ const MatchGraph = () => {
 
   // Helper function to calculate matching score between two people
   const calculateMatchingScore = (person1, person2) => {
-    const commonInterests = person1.common_interests.filter(interest =>
-      person2.common_interests.includes(interest)
-    );
-    const commonDiscussionTopics = person1.discussion_topics.filter(topic =>
-      person2.discussion_topics.includes(topic)
-    );
+    const commonInterests = person1.common_interests?.filter(interest =>
+      person2.common_interests?.includes(interest)
+    ) || [];
+    const commonDiscussionTopics = person1.discussion_topics?.filter(topic =>
+      person2.discussion_topics?.includes(topic)
+    ) || [];
 
     // Calculate score based on the number of shared interests and discussion topics
     const interestScore = commonInterests.length * 10; // Each common interest gives 10 points
@@ -111,7 +111,7 @@ const MatchGraph = () => {
         </form>
       ) : (
         <div className="graph-container">
-          <h3>Your Top Matches</h3>
+          <h3 style={{ color: 'white' }}>Your Top Matches</h3>
           <ForceGraph3D
             graphData={filteredData}
             nodeAutoColorBy="group"
@@ -137,8 +137,8 @@ const MatchGraph = () => {
               <h2>{selectedPerson.name}</h2>
               <p>{selectedPerson.description ? selectedPerson.description : 'No description available'}</p>
               <p><strong>Matching Score:</strong> {selectedPerson.matchingScore}</p>
-              <p><strong>Common Interests:</strong> {selectedPerson.common_interests.join(', ')}</p>
-              <p><strong>Discussion Topics:</strong> {selectedPerson.discussion_topics.join(', ')}</p>
+              <p><strong>Common Interests:</strong> {selectedPerson.common_interests?.join(', ') || 'No common interests'}</p>
+              <p><strong>Discussion Topics:</strong> {selectedPerson.discussion_topics?.join(', ') || 'No discussion topics'}</p>
             </div>
           )}
         </div>

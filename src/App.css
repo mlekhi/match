@@ -3,7 +3,7 @@
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background-color: #f0f2f5;
+  background-color: #000000;
 }
 
 .login-form {
@@ -56,7 +56,7 @@
 }
 
 .close-btn {
-  background-color: #ff5c5c;
+  background-color: #1e3c66;
   border: none;
   color: white;
   padding: 10px;
