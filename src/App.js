@@ -2,26 +2,26 @@ import React, { useState } from 'react';
 import { ForceGraph3D } from 'react-force-graph';
 import * as THREE from 'three'; // Import THREE.js for 3D geometry
 import './App.css';
-import guestData from './data.json'; // Import the JSON data
+import guestData from './people_data.json'; // Import the JSON data
 
 const MatchGraph = () => {
   const [name, setName] = useState('');
   const [filteredData, setFilteredData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState(null); // State for clicked person
-  const [highScoreMatches, setHighScoreMatches] = useState([]); // For people with score > 70
+  const [highScoreMatches, setHighScoreMatches] = useState([]); // For people with score > 70, excluding score 100
   const [error, setError] = useState(''); // State for error message
 
   // Helper function to determine color based on matching score
   const getNodeColor = (score) => {
     if (score === 100) return '#ffffff'; // Highest score
-    if (score >= 90) return '#a8c4e0';
-    if (score >= 80) return '#b0d5f5';
-    if (score >= 70) return '#658db5';
-    if (score >= 60) return '#51769c';
-    if (score >= 50) return '#375b80';
-    if (score >= 40) return '#234566';
-    if (score >= 30) return '#15324d';
+    if (score >= 90) return '#6a8aab';
+    if (score >= 80) return '#52769c';
+    if (score >= 70) return '#41648a';
+    if (score >= 60) return '#32557a';
+    if (score >= 50) return '#224366';
+    if (score >= 40) return '#1e3d5e';
+    if (score >= 30) return '#163352';
     return '#071929'; // Lowest score
   };
 
@@ -37,37 +37,81 @@ const MatchGraph = () => {
       return null;
     }
 
-    // Generate graph structure: nodes and links with dynamic matching score from `matching_scores`
-    const nodes = guestData.map(person => ({
-      id: person.name,
-      name: person.name,
-      group: person.name === user.name ? 1 : 2, // Group 1 is the user, 2 is everyone else
-      description: person.description,
-      matchingScore: user.matching_scores[person.name] || 0,
-      color: getNodeColor(user.matching_scores[person.name] || 0), // Set color based on score
-    }));
+    // Tier structure
+    const tier1 = []; // Highest match (90+)
+    const tier2 = []; // 70-90 match
+    const tier3 = []; // 50-70 match
+    const tier4 = []; // Below 50 match
 
-    const links = [];
-    const highScoreMatchesList = [];
+    // Generate nodes and categorize into tiers
+    const nodes = guestData.map(person => {
+      const score = user.matching_scores[person.name] || 0;
+      const node = {
+        id: person.name,
+        name: person.name,
+        group: person.name === user.name ? 1 : 2, // Group 1 is the user, 2 is everyone else
+        description: person.discussion_topics.join("<br />"), // Corrected to join with new lines
+        matchingScore: score,
+        color: getNodeColor(score), // Set color based on score
+      };
 
-    guestData.forEach(person => {
-      if (person.name !== user.name) {
-        const score = user.matching_scores[person.name] || 0;
-
-        if (score >= 70) {
-          highScoreMatchesList.push(person); // Ensure we're pushing the correct person object
-        }
-
-        links.push({
-          source: user.name,
-          target: person.name,
-          value: score, // Matching score between the user and this person
-          distance: 500 - (score * 10), // Drastically adjust distance, higher score = shorter distance
-        });
+      // Categorize by score
+      if (score >= 90) {
+        tier1.push(node);
+      } else if (score >= 70) {
+        tier2.push(node);
+      } else if (score >= 50) {
+        tier3.push(node);
+      } else {
+        tier4.push(node);
       }
+
+      return node;
     });
 
-    setHighScoreMatches(highScoreMatchesList); // Set the high score matches for rendering chips
+    // Create links between tiers
+    const links = [];
+
+    // Link nodes from tier 1 to tier 2
+    tier1.forEach(node => {
+      tier2.forEach(targetNode => {
+        links.push({
+          source: node.id,
+          target: targetNode.id,
+          value: targetNode.matchingScore, // Matching score between the nodes
+          distance: 1000 - (targetNode.matchingScore * 20), // Adjust distance based on score
+        });
+      });
+    });
+
+    // Link nodes from tier 2 to tier 3
+    tier2.forEach(node => {
+      tier3.forEach(targetNode => {
+        links.push({
+          source: node.id,
+          target: targetNode.id,
+          value: targetNode.matchingScore,
+          distance: 500 - (targetNode.matchingScore * 20),
+        });
+      });
+    });
+
+    // Link nodes from tier 3 to tier 4
+    tier3.forEach(node => {
+      tier4.forEach(targetNode => {
+        links.push({
+          source: node.id,
+          target: targetNode.id,
+          value: targetNode.matchingScore,
+          distance: 500 - (targetNode.matchingScore * 100),
+        });
+      });
+    });
+
+    // Set the top 5 matches from tier 1, excluding those with a score of 100
+    const filteredHighScoreMatches = tier1.filter(node => node.matchingScore < 100).slice(0, 5);
+    setHighScoreMatches(filteredHighScoreMatches); 
+
     return { nodes, links };
   };
 
@@ -93,7 +137,7 @@ const MatchGraph = () => {
   const handleChipClick = (person) => {
     setSelectedPerson({
       name: person.name,
-      description: person.description,
+      description: person.discussion_topics,
       matchingScore: person.matchingScore,
     }); // Set the selected person from the chip
   };
@@ -139,7 +183,7 @@ const MatchGraph = () => {
           <ForceGraph3D
             graphData={filteredData}
             nodeAutoColorBy="group"
-            nodeLabel={(node) => `${node.name}: ${node.description}`}
+            nodeLabel={(node) => `${node.name}`}
             linkDirectionalParticles={4}
             linkDirectionalParticleSpeed={(d) => d.value * 0.001}
             linkDistance={(link) => link.distance} // Use calculated distance
@@ -153,6 +197,8 @@ const MatchGraph = () => {
             }}
             width={window.innerWidth} // Full width of the window
             height={window.innerHeight - 100} // Full height minus the header
+            // Adjust the initial zoom level here
+            cameraPosition={{ z: 400 }} // Zoomed-in initial position
           />
 
           {/* Popup for person details */}
@@ -160,7 +206,8 @@ const MatchGraph = () => {
             <div className="person-popup">
               <button className="close-btn" onClick={handleClosePopup}>x</button>
               <h2>{selectedPerson.name}</h2>
-              <p>{selectedPerson.description ? selectedPerson.description : 'No description available'}</p>
+              <p><strong>Talking Points:</strong></p>
+              <span dangerouslySetInnerHTML={{ __html: selectedPerson.description ? selectedPerson.description : 'No prompts this time. Chat with them!' }} />
             </div>
           )}
         </div>
