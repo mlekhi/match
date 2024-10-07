@@ -197,9 +197,8 @@ const MatchGraph = () => {
             }}
             width={window.innerWidth} // Full width of the window
             height={window.innerHeight - 100} // Full height minus the header
-            // Adjust the initial zoom level here
-            cameraPosition={{ z: 400 }} // Zoomed-in initial position
-          />
+            cameraPosition={{ x: 0, y: 0, z: 100 }} // Zoomed-in initial position
+            />
 
           {/* Popup for person details */}
           {selectedPerson && (
@@ -207,7 +206,7 @@ const MatchGraph = () => {
               <button className="close-btn" onClick={handleClosePopup}>x</button>
               <h2>{selectedPerson.name}</h2>
               <p><strong>Talking Points:</strong></p>
-              <span dangerouslySetInnerHTML={{ __html: selectedPerson.description ? selectedPerson.description : 'No prompts this time. Chat with them!' }} />
+              <span className="wrap" dangerouslySetInnerHTML={{ __html: selectedPerson.description ? selectedPerson.description : 'No prompts this time. Chat with them!' }} />
             </div>
           )}
         </div>
