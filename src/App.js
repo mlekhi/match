@@ -169,6 +169,17 @@ const MatchGraph = () => {
       ) : (
         <div className="graph-container">
           <h3 style={{ color: 'white' }}>Your Top Matches</h3>
+          <div className="chips-container">
+            {highScoreMatches.map((person, index) => (
+              <span
+                key={index}
+                className="chip"
+                onClick={() => handleChipClick(person)} // Open corresponding person popup on click
+              >
+                {person.name} {/* Correctly access the person.name */}
+              </span>
+            ))}
+          </div>
           <ForceGraph3D
             graphData={filteredData}
             nodeAutoColorBy="group"
@@ -189,17 +200,6 @@ const MatchGraph = () => {
             // Adjust the initial zoom level here
             cameraPosition={{ z: 400 }} // Zoomed-in initial position
           />
-          <div className="chips-container">
-            {highScoreMatches.map((person, index) => (
-              <span
-                key={index}
-                className="chip"
-                onClick={() => handleChipClick(person)} // Open corresponding person popup on click
-              >
-                {person.name} {/* Correctly access the person.name */}
-              </span>
-            ))}
-          </div>
 
           {/* Popup for person details */}
           {selectedPerson && (
