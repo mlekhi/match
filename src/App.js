@@ -109,7 +109,7 @@ const MatchGraph = () => {
     });
 
     // Set the top 5 matches from tier 1, excluding those with a score of 100
-    const filteredHighScoreMatches = tier1.filter(node => node.matchingScore < 100).slice(0, 5);
+    const filteredHighScoreMatches = nodes.filter(node => node.matchingScore < 100).slice(0, 5);
     setHighScoreMatches(filteredHighScoreMatches); 
 
     return { nodes, links };
