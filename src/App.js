@@ -31,6 +31,7 @@ const MatchGraph = () => {
 
     // Find the user by comparing names in lowercase
     const user = guestData.find(person => person.name.toLowerCase() === normalizedInputName);
+    console.log(user)
 
     if (!user) {
       setError('Name not found in the guest list. Please use the exact name you registered under.');
@@ -45,10 +46,12 @@ const MatchGraph = () => {
 
     // Generate nodes and categorize into tiers
     const nodes = guestData.map(person => {
+      const firstName = person.name.split(" ")[0];
       const score = user.matching_scores[person.name] || 0;
+      console.log(score)
       const node = {
         id: person.name,
-        name: person.name,
+        name: firstName,
         group: person.name === user.name ? 1 : 2, // Group 1 is the user, 2 is everyone else
         description: person.discussion_topics.join("<br />"), // Corrected to join with new lines
         matchingScore: score,
@@ -109,9 +112,13 @@ const MatchGraph = () => {
     });
 
     // Set the top 5 matches from tier 1, excluding those with a score of 100
-    const filteredHighScoreMatches = nodes.filter(node => node.matchingScore < 100).slice(0, 5);
+    const filteredHighScoreMatches = guestData
+    .filter(person => user.matching_scores[person.name] < 100) // Filter by matching score from user's data
+    .sort((a, b) => user.matching_scores[b.name] - user.matching_scores[a.name]) // Sort by highest matching score
+    .slice(0, 5); // Take top 5 matches
+  
     setHighScoreMatches(filteredHighScoreMatches); 
-
+  
     return { nodes, links };
   };
 
@@ -135,13 +142,21 @@ const MatchGraph = () => {
 
   // Handle chip click
   const handleChipClick = (person) => {
-    setSelectedPerson({
-      name: person.name,
-      description: person.discussion_topics,
-      matchingScore: person.matchingScore,
-    }); // Set the selected person from the chip
-  };
+    console.log(person);
+    const firstName = person.name.split(" ")[0];
 
+    // Check if discussion_topics exists and is an array, then join, otherwise return an empty string or fallback text
+    const description = Array.isArray(person.discussion_topics)
+      ? person.discussion_topics.join("<br />")
+      : "No discussion topics available";
+  
+    setSelectedPerson({
+      name: firstName,
+      description: description,
+      matchingScore: person.matchingScore,
+    });
+  };
+  
   // Close popup
   const handleClosePopup = () => {
     setSelectedPerson(null); // Close the popup
@@ -176,7 +191,7 @@ const MatchGraph = () => {
                 className="chip"
                 onClick={() => handleChipClick(person)} // Open corresponding person popup on click
               >
-                {person.name} {/* Correctly access the person.name */}
+                {person.name.split(" ")[0]} {/* Correctly access the person.name */}
               </span>
             ))}
           </div>
@@ -204,7 +219,7 @@ const MatchGraph = () => {
           {selectedPerson && (
             <div className="person-popup">
               <button className="close-btn" onClick={handleClosePopup}>x</button>
-              <h2>{selectedPerson.name}</h2>
+              <h2>{selectedPerson.name.split(" ")[0]}</h2>
               <p><strong>Talking Points:</strong></p>
               <span className="wrap" dangerouslySetInnerHTML={{ __html: selectedPerson.description ? selectedPerson.description : 'No prompts this time. Chat with them!' }} />
             </div>
